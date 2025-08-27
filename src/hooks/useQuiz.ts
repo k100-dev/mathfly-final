@@ -363,17 +363,17 @@ export function useQuiz() {
       const { data: currentProgress } = await supabase
         .from('user_progress')
         .select('*')
-        .eq('user_id', user.id)
-        .single();
+        .eq('user_id', user.id);
 
-      if (currentProgress) {
+      if (currentProgress && currentProgress.length > 0) {
+        const progressData = currentProgress[0];
         console.log('📈 Atualizando progresso existente');
         const { error: updateError } = await supabase
           .from('user_progress')
           .update({
-            total_correct: currentProgress.total_correct + correctAnswers,
-            total_points: currentProgress.total_points + session.score,
-            max_phase: Math.max(currentProgress.max_phase, phaseNumber)
+            total_correct: progressData.total_correct + correctAnswers,
+            total_points: progressData.total_points + session.score,
+            max_phase: Math.max(progressData.max_phase, phaseNumber)
           })
           .eq('user_id', user.id);
 

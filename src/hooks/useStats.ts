@@ -51,17 +51,17 @@ export function useStats() {
       const { data: progress } = await supabase
         .from('user_progress')
         .select('*')
-        .eq('user_id', user.id)
-        .single();
+        .eq('user_id', user.id);
 
       const { data: results } = await supabase
         .from('phase_results')
         .select('correct_answers, completed_at')
         .eq('user_id', user.id);
 
-      const totalScore = progress?.total_points || 0;
+      const progressData = progress && progress.length > 0 ? progress[0] : null;
+      const totalScore = progressData?.total_points || 0;
       const totalGames = results?.length || 0;
-      const totalCorrect = progress?.total_correct || 0;
+      const totalCorrect = progressData?.total_correct || 0;
       const averageAccuracy = totalGames > 0 ? (totalCorrect / (totalGames * 5)) * 100 : 0;
 
       const stats: UserStats = {
