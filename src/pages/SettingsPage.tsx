@@ -1,93 +1,223 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
   User, 
-  Bell, 
-  Palette, 
-  Volume2, 
   Shield, 
   Save,
   Eye,
-  EyeOff
+  EyeOff,
+  CheckCircle,
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../lib/supabase';
+
+interface FormData {
+  displayName: string;
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+interface FormErrors {
+  displayName?: string;
+  currentPassword?: string;
+  newPassword?: string;
+  confirmPassword?: string;
+  general?: string;
+}
 
 export function SettingsPage() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   
-  // Settings state
-  const [settings, setSettings] = useState({
-    notifications: true,
-    soundEffects: true,
-    darkMode: true,
-    showHints: true,
-    autoSave: true,
-    emailNotifications: false
+  const [formData, setFormData] = useState<FormData>({
+    displayName: user?.user_metadata?.name || '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
   });
 
-  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState('');
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
+
+  // Clear success message after 5 seconds
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => setSuccess(''), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
 
   const handleBackToDashboard = () => {
     navigate('/');
   };
 
-  const handleSettingChange = (key: string, value: boolean) => {
-    setSettings(prev => ({
-      ...prev,
-      [key]: value
-    }));
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    // Validate display name
+    if (!formData.displayName.trim()) {
+      newErrors.displayName = 'Nome não pode estar vazio';
+    }
+
+    // If changing password, validate all password fields
+    if (formData.newPassword || formData.confirmPassword || formData.currentPassword) {
+      if (!formData.currentPassword) {
+        newErrors.currentPassword = 'Senha atual é obrigatória';
+      }
+
+      if (!formData.newPassword) {
+        newErrors.newPassword = 'Nova senha é obrigatória';
+      } else {
+        // Password strength validation
+        if (formData.newPassword.length < 8) {
+          newErrors.newPassword = 'Nova senha deve ter pelo menos 8 caracteres';
+        } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.newPassword)) {
+          newErrors.newPassword = 'Nova senha deve conter letras maiúsculas, minúsculas e números';
+        }
+      }
+
+      if (formData.newPassword !== formData.confirmPassword) {
+        newErrors.confirmPassword = 'Confirmação de senha não confere';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const handleSaveSettings = () => {
-    // Aqui você pode implementar a lógica para salvar as configurações
-    console.log('Salvando configurações:', settings);
-    // Por enquanto, apenas mostra um feedback visual
-    alert('Configurações salvas com sucesso!');
+  const updateDisplayName = async (name: string) => {
+    try {
+      // Update user metadata
+      const { error: authError } = await supabase.auth.updateUser({
+        data: { name: name }
+      });
+
+      if (authError) throw authError;
+
+      // Update users table
+      const { error: dbError } = await supabase
+        .from('users')
+        .update({ name: name })
+        .eq('id', user?.id);
+
+      if (dbError) throw dbError;
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error updating display name:', error);
+      return { success: false, error: error.message };
+    }
   };
 
-  const SettingToggle = ({ 
-    title, 
-    description, 
-    icon: Icon, 
-    settingKey, 
-    value 
-  }: {
-    title: string;
-    description: string;
-    icon: any;
-    settingKey: string;
-    value: boolean;
-  }) => (
-    <div className="flex items-center justify-between p-4 bg-slate-700/30 rounded-xl">
-      <div className="flex items-center space-x-3">
-        <div className="w-10 h-10 bg-slate-600/50 rounded-lg flex items-center justify-center">
-          <Icon className="w-5 h-5 text-slate-300" />
-        </div>
-        <div>
-          <h3 className="text-white font-medium">{title}</h3>
-          <p className="text-sm text-slate-400">{description}</p>
-        </div>
-      </div>
-      <button
-        onClick={() => handleSettingChange(settingKey, !value)}
-        className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${
-          value ? 'bg-indigo-500' : 'bg-slate-600'
-        }`}
-      >
-        <div
-          className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 ${
-            value ? 'translate-x-7' : 'translate-x-1'
-          }`}
-        />
-      </button>
-    </div>
-  );
+  const updatePassword = async (currentPassword: string, newPassword: string) => {
+    try {
+      // Verify current password by attempting to sign in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user?.email || '',
+        password: currentPassword,
+      });
+
+      if (signInError) {
+        return { success: false, error: 'Senha atual incorreta' };
+      }
+
+      // Update password
+      const { error } = await supabase.auth.updateUser({ 
+        password: newPassword 
+      });
+
+      if (error) throw error;
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error updating password:', error);
+      return { success: false, error: 'Erro ao atualizar senha. Tente novamente.' };
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+
+    setLoading(true);
+    setErrors({});
+    setSuccess('');
+
+    try {
+      let nameUpdated = false;
+      let passwordUpdated = false;
+
+      // Update display name if changed
+      if (formData.displayName !== (user?.user_metadata?.name || '')) {
+        const result = await updateDisplayName(formData.displayName);
+        if (!result.success) {
+          setErrors({ general: result.error });
+          return;
+        }
+        nameUpdated = true;
+      }
+
+      // Update password if provided
+      if (formData.newPassword) {
+        const result = await updatePassword(formData.currentPassword, formData.newPassword);
+        if (!result.success) {
+          setErrors({ general: result.error });
+          return;
+        }
+        passwordUpdated = true;
+        
+        // Clear password fields
+        setFormData(prev => ({
+          ...prev,
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        }));
+      }
+
+      // Show success message
+      if (nameUpdated && passwordUpdated) {
+        setSuccess('Nome e senha atualizados com sucesso!');
+      } else if (nameUpdated) {
+        setSuccess('Nome atualizado com sucesso!');
+      } else if (passwordUpdated) {
+        setSuccess('Senha atualizada com sucesso!');
+      }
+
+    } catch (error: any) {
+      console.error('Error saving settings:', error);
+      setErrors({ general: 'Erro inesperado. Tente novamente.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (field: keyof FormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Clear field error when user starts typing
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const togglePasswordVisibility = (field: 'current' | 'new' | 'confirm') => {
+    setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
@@ -113,6 +243,34 @@ export function SettingsPage() {
           </div>
         </motion.div>
 
+        {/* Success Message */}
+        {success && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-green-500/10 border border-green-500/20 rounded-xl p-4"
+          >
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+              <p className="text-green-400 font-medium">{success}</p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* General Error */}
+        {errors.general && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-500/10 border border-red-500/20 rounded-xl p-4"
+          >
+            <div className="flex items-center space-x-2">
+              <AlertCircle className="w-5 h-5 text-red-400" />
+              <p className="text-red-400 font-medium">{errors.general}</p>
+            </div>
+          </motion.div>
+        )}
+
         {/* Profile Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -130,79 +288,133 @@ export function SettingsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Display Name */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Nome
-                </label>
                 <Input
+                  label="Nome de Exibição"
                   type="text"
-                  defaultValue={user?.user_metadata?.name || 'Usuário'}
-                  className="w-full"
+                  value={formData.displayName}
+                  onChange={(e) => handleInputChange('displayName', e.target.value)}
+                  error={errors.displayName}
+                  placeholder="Seu nome"
+                  disabled={loading}
                 />
               </div>
+
+              {/* Email (Read-only) */}
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Email
-                </label>
                 <Input
+                  label="Email"
                   type="email"
                   value={user?.email || ''}
                   disabled
-                  className="w-full bg-slate-700/50"
+                  className="bg-slate-700/50"
                 />
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-slate-300 mb-2">
-                Nova Senha
-              </label>
-              <div className="relative">
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Digite sua nova senha"
-                  className="w-full pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-white"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <Button className="flex items-center space-x-2">
-                <Save className="w-4 h-4" />
-                <span>Salvar Alterações</span>
-              </Button>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Privacy & Security Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card className="p-6">
-            <h2 className="text-xl font-bold text-white mb-6">Privacidade e Segurança</h2>
-            
-            <div className="space-y-4">
-              <div className="p-4 bg-slate-700/30 rounded-xl">
-                <div className="flex items-center space-x-3 mb-2">
-                  <Shield className="w-5 h-5 text-green-400" />
-                  <h3 className="text-white font-medium">Conta Segura</h3>
-                </div>
-                <p className="text-sm text-slate-400">
-                  Sua conta está protegida com autenticação segura. Seus dados são criptografados e nunca compartilhados.
+                <p className="text-xs text-slate-500 mt-1">
+                  O email não pode ser alterado
                 </p>
               </div>
-            </div>
+
+              {/* Password Section */}
+              <div className="border-t border-slate-700 pt-6">
+                <div className="flex items-center space-x-2 mb-4">
+                  <Shield className="w-5 h-5 text-slate-400" />
+                  <h3 className="text-lg font-semibold text-white">Alterar Senha</h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Current Password */}
+                  <div className="md:col-span-2">
+                    <div className="relative">
+                      <Input
+                        label="Senha Atual"
+                        type={showPasswords.current ? "text" : "password"}
+                        value={formData.currentPassword}
+                        onChange={(e) => handleInputChange('currentPassword', e.target.value)}
+                        error={errors.currentPassword}
+                        placeholder="Digite sua senha atual"
+                        disabled={loading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => togglePasswordVisibility('current')}
+                        className="absolute right-3 top-9 text-slate-400 hover:text-white"
+                      >
+                        {showPasswords.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* New Password */}
+                  <div>
+                    <div className="relative">
+                      <Input
+                        label="Nova Senha"
+                        type={showPasswords.new ? "text" : "password"}
+                        value={formData.newPassword}
+                        onChange={(e) => handleInputChange('newPassword', e.target.value)}
+                        error={errors.newPassword}
+                        placeholder="Digite sua nova senha"
+                        disabled={loading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => togglePasswordVisibility('new')}
+                        className="absolute right-3 top-9 text-slate-400 hover:text-white"
+                      >
+                        {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div>
+                    <div className="relative">
+                      <Input
+                        label="Confirmar Nova Senha"
+                        type={showPasswords.confirm ? "text" : "password"}
+                        value={formData.confirmPassword}
+                        onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                        error={errors.confirmPassword}
+                        placeholder="Confirme sua nova senha"
+                        disabled={loading}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => togglePasswordVisibility('confirm')}
+                        className="absolute right-3 top-9 text-slate-400 hover:text-white"
+                      >
+                        {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-2">
+                  <p className="text-xs text-slate-500">
+                    A senha deve ter pelo menos 8 caracteres, incluindo letras maiúsculas, minúsculas e números
+                  </p>
+                </div>
+              </div>
+
+              {/* Save Button */}
+              <div className="pt-4">
+                <Button 
+                  type="submit" 
+                  loading={loading}
+                  disabled={loading}
+                  className="flex items-center space-x-2"
+                >
+                  {loading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  <span>{loading ? 'Salvando...' : 'Salvar Alterações'}</span>
+                </Button>
+              </div>
+            </form>
           </Card>
         </motion.div>
 
@@ -210,7 +422,7 @@ export function SettingsPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.3 }}
         >
           <Card className="p-6">
             <h2 className="text-xl font-bold text-white mb-4">Sobre o MathFly</h2>

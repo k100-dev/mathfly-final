@@ -4115,12 +4115,22 @@ export class QuizService {
           })
           .eq('user_id', userId);
 
+      // Map difficulty level to phase number
+      const phaseMap: Record<string, number> = {
+        'facil': 1,
+        'medio': 2,
+        'dificil': 3,
+        'expert': 4
+      };
+      
+      const phaseNumber = phaseMap[results.nivel] || 1;
+      
         if (updateError) throw updateError;
       } else {
         // Criar novo progresso
         const { error: insertError } = await supabase.from('user_progress').insert({
           user_id: userId,
-          max_phase: phaseNumber,
+          phase: phaseNumber,
           total_correct: correctAnswers,
           total_points: score
         });
