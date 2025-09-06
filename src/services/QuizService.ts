@@ -1732,16 +1732,12 @@ export class QuizService {
       },
       {
         "id_pergunta": "m73",
-        "enunciado": "Se a
-      }
-    ]
-  }
-} área de um quadrado é 100 cm², qual é o seu perímetro?",
-        "alternativa_a": "20 cm",
-        "alternativa_b": "40 cm",
-        "alternativa_c": "10 cm",
-        "alternativa_d": "50 cm",
-        "resposta_correta": "b",
+        "enunciado": "Se a área de um quadrado é 64 cm², qual é o perímetro?",
+        "alternativa_a": "32 cm",
+        "alternativa_b": "16 cm", 
+        "alternativa_c": "24 cm",
+        "alternativa_d": "28 cm",
+        "resposta_correta": "a",
         "nivel": "medio"
       },
       {
@@ -4056,7 +4052,8 @@ export class QuizService {
     } catch (error) {
       console.error('❌ Erro ao buscar questões:', error);
       throw error;
-  },
+    }
+  }
 
   static async saveQuizResult(userId: string, result: {
     nivel: DifficultLevel;
@@ -4117,16 +4114,6 @@ export class QuizService {
           })
           .eq('user_id', userId);
 
-      // Map difficulty level to phase number
-      const phaseMap: Record<string, number> = {
-        'facil': 1,
-        'medio': 2,
-        'dificil': 3,
-        'expert': 4
-      };
-      
-      const phaseNumber = phaseMap[results.nivel] || 1;
-      
         if (updateError) throw updateError;
       } else {
         // Criar novo progresso
