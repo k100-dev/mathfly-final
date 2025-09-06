@@ -2,33 +2,49 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft } from 'lucide-react';
-import { QuestionCard } from '../components/quiz/QuestionCard';
-import { ResultsModal } from '../components/quiz/ResultsModal';
+import { QuizIntro } from '../components/quiz/QuizIntro';
+import { QuizQuestion } from '../components/quiz/QuizQuestion';
+import { QuizProgress } from '../components/quiz/QuizProgress';
+import { QuizResults } from '../components/quiz/QuizResults';
 import { Button } from '../components/ui/Button';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useQuiz } from '../hooks/useQuiz';
 import { DifficultLevel } from '../types/game';
 
+type QuizState = 'intro' | 'playing' | 'results' | 'loading';
+
+const LEVEL_ORDER: DifficultLevel[] = ['facil', 'medio', 'dificil', 'expert'];
+
 export function QuizPage() {
   const navigate = useNavigate();
   const { level } = useParams<{ level: string }>();
-  const { session, loading, startQuiz, submitAnswer, finishQuiz } = useQuiz();
-  const [timeLeft, setTimeLeft] = useState(45);
-  const [showResults, setShowResults] = useState(false);
+  const { session, loading, startQuiz, submitAnswer, finishQuiz, resetQuiz } = useQuiz();
+  
+  const [quizState, setQuizState] = useState<QuizState>('intro');
+  const [timeLeft, setTimeLeft] = useState(30);
   const [quizResults, setQuizResults] = useState(null);
-  const [isAnswered, setIsAnswered] = useState(false);
+  const [selectedAnswer, setSelectedAnswer] = useState<string>('');
+  const [showFeedback, setShowFeedback] = useState(false);
 
   const currentLevel = (level as DifficultLevel) || 'facil';
+  const currentLevelIndex = LEVEL_ORDER.indexOf(currentLevel);
+  const hasNextLevel = currentLevelIndex < LEVEL_ORDER.length - 1;
+  const nextLevel = hasNextLevel ? LEVEL_ORDER[currentLevelIndex + 1] : null;
 
+  // Reset quiz when level changes
   useEffect(() => {
-    startQuiz(currentLevel);
-  }, [currentLevel, startQuiz]);
+    resetQuiz();
+    setQuizState('intro');
+    setQuizResults(null);
+    setSelectedAnswer('');
+    setShowFeedback(false);
+  }, [level, resetQuiz]);
 
+  // Timer management
   useEffect(() => {
-    if (!session) return;
+    if (quizState !== 'playing' || !session || showFeedback) return;
 
-    // Reset timer for each new question
-    setTimeLeft(45);
+    setTimeLeft(30); // Reset timer for new question
 
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
@@ -41,124 +57,176 @@ export function QuizPage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [session?.currentQuestionIndex]);
+  }, [session?.currentQuestionIndex, quizState, showFeedback]);
+
+  const handleStartQuiz = async () => {
+    setQuizState('loading');
+    const newSession = await startQuiz(currentLevel, 5);
+    if (newSession) {
+      setQuizState('playing');
+    } else {
+      setQuizState('intro');
+    }
+  };
 
   const handleTimeUp = () => {
-    if (isAnswered) return;
+    if (showFeedback) return;
     handleAnswer(''); // Empty answer for timeout
   };
 
   const handleAnswer = async (answer: string) => {
-    if (isAnswered) return;
+    if (showFeedback) return;
     
-    setIsAnswered(true);
+    setSelectedAnswer(answer);
+    setShowFeedback(true);
+    
     const result = submitAnswer(answer);
     
     if (result?.isComplete) {
-      // Quiz completed
+      // Quiz completed - wait for feedback then show results
       setTimeout(async () => {
+        setQuizState('loading');
         const results = await finishQuiz();
         if (results) {
           setQuizResults(results);
-          setShowResults(true);
+          setQuizState('results');
         }
-      }, 1500); // Reduzir delay para melhor UX
+      }, 2000);
     } else {
-      // Next question
+      // Next question - wait for feedback then continue
       setTimeout(() => {
-        setIsAnswered(false);
-      }, 1500); // Reduzir delay entre perguntas
+        setShowFeedback(false);
+        setSelectedAnswer('');
+      }, 2000);
+    }
+  };
+
+  const handlePlayAgain = () => {
+    resetQuiz();
+    setQuizState('intro');
+    setQuizResults(null);
+    setSelectedAnswer('');
+    setShowFeedback(false);
+  };
+
+  const handleNextLevel = () => {
+    if (nextLevel) {
+      navigate(`/quiz/${nextLevel}`);
     }
   };
 
   const handleBackToDashboard = () => {
-    setShowResults(false);
-    setQuizResults(null);
     navigate('/');
   };
 
-  const handlePlayAgain = () => {
-    setShowResults(false);
-    setQuizResults(null);
-    setIsAnswered(false);
-    startQuiz(currentLevel);
-  };
-
-  if (loading || !session) {
+  // Loading state
+  if (quizState === 'loading' || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <LoadingSpinner size="lg" text="Preparando quiz..." />
+        <LoadingSpinner size="lg" text={
+          quizState === 'loading' && session ? "Finalizando quiz..." : "Preparando quiz..."
+        } />
       </div>
     );
   }
 
-  if (session.currentQuestionIndex >= session.questions.length) {
+  // Intro state
+  if (quizState === 'intro') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-        <LoadingSpinner size="lg" text="Finalizando quiz..." />
-      </div>
+      <QuizIntro
+        level={currentLevel}
+        onStart={handleStartQuiz}
+        totalQuestions={5}
+        timePerQuestion={30}
+      />
     );
   }
 
-  const currentQuestion = session.questions[session.currentQuestionIndex];
+  // Results state
+  if (quizState === 'results' && quizResults) {
+    return (
+      <QuizResults
+        results={quizResults}
+        onPlayAgain={handlePlayAgain}
+        onBackToDashboard={handleBackToDashboard}
+        onNextLevel={hasNextLevel ? handleNextLevel : undefined}
+        hasNextLevel={hasNextLevel}
+      />
+    );
+  }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={handleBackToDashboard}
-            className="flex items-center space-x-2"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Voltar</span>
-          </Button>
-          
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-white">
-              Nível <span className="capitalize">{currentLevel}</span>
-            </h1>
-            <p className="text-slate-400">
-              Pontuação atual: <span className="text-indigo-400 font-semibold">{session.score}</span>
-            </p>
-          </div>
-          
-          <div />
+  // Playing state
+  if (quizState === 'playing' && session) {
+    if (session.currentQuestionIndex >= session.questions.length) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+          <LoadingSpinner size="lg" text="Processando resultados..." />
         </div>
+      );
+    }
 
-        {/* Question */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={session.currentQuestionIndex}
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            transition={{ duration: 0.3 }}
-          >
-            <QuestionCard
-              question={currentQuestion}
-              questionNumber={session.currentQuestionIndex + 1}
-              totalQuestions={session.questions.length}
-              timeLeft={timeLeft}
-              onAnswer={handleAnswer}
-              isAnswered={isAnswered}
-            />
-          </motion.div>
-        </AnimatePresence>
+    const currentQuestion = session.questions[session.currentQuestionIndex];
 
-        {/* Results Modal */}
-        {showResults && quizResults && (
-          <ResultsModal
-            isOpen={showResults}
-            onClose={() => setShowResults(false)}
-            results={quizResults}
-            onPlayAgain={handlePlayAgain}
-            onBackToDashboard={handleBackToDashboard}
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-4">
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <Button
+              variant="ghost"
+              onClick={handleBackToDashboard}
+              className="flex items-center space-x-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Sair</span>
+            </Button>
+            
+            <div className="text-center">
+              <h1 className="text-xl font-bold text-white">
+                Nível <span className="capitalize">{currentLevel}</span>
+              </h1>
+            </div>
+            
+            <div />
+          </div>
+
+          {/* Progress */}
+          <QuizProgress
+            currentQuestion={session.currentQuestionIndex + 1}
+            totalQuestions={session.questions.length}
+            score={session.score}
+            timeLeft={timeLeft}
+            maxTime={30}
           />
-        )}
+
+          {/* Question */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={session.currentQuestionIndex}
+              initial={{ opacity: 0, x: 50 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -50 }}
+              transition={{ duration: 0.3 }}
+            >
+              <QuizQuestion
+                question={currentQuestion}
+                onAnswer={handleAnswer}
+                isAnswered={showFeedback}
+                selectedAnswer={selectedAnswer}
+                correctAnswer={currentQuestion.resposta_correta}
+                showFeedback={showFeedback}
+              />
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
+    );
+  }
+
+  // Fallback
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+      <LoadingSpinner size="lg" text="Carregando..." />
     </div>
   );
 }
