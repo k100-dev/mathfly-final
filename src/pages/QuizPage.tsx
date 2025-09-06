@@ -28,7 +28,7 @@ export function QuizPage() {
   const [quizResults, setQuizResults] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isAnswering, setIsAnswering] = useState(false);
-  const [showFeedback, setShowFeedback] = useState(false);
+  const [showNextButton, setShowNextButton] = useState(false);
 
   const currentLevel = (level as DifficultLevel) || 'facil';
   const currentLevelIndex = LEVEL_ORDER.indexOf(currentLevel);
@@ -42,12 +42,12 @@ export function QuizPage() {
     setQuizResults(null);
     setSelectedAnswer(null);
     setIsAnswering(false);
-    setShowFeedback(false);
+    setShowNextButton(false);
   }, [level, resetQuiz]);
 
   // Timer management
   useEffect(() => {
-    if (quizState !== 'playing' || !session || isAnswering) return;
+    if (quizState !== 'playing' || !session || isAnswering || showNextButton) return;
 
     setTimeLeft(30); // Reset timer for new question
 
@@ -62,7 +62,7 @@ export function QuizPage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [session?.currentQuestionIndex, quizState, isAnswering]);
+  }, [session?.currentQuestionIndex, quizState, isAnswering, showNextButton]);
 
   const handleStartQuiz = async () => {
     setQuizState('loading');
@@ -75,44 +75,47 @@ export function QuizPage() {
   };
 
   const handleTimeUp = () => {
-    if (isAnswering) return;
-    handleAnswer(''); // Empty answer for timeout
+    if (isAnswering || showNextButton) return;
+    handleAnswerClick(''); // Empty answer for timeout
   };
 
-  const handleAnswer = (answer: string) => {
-    if (isAnswering || !session) return;
+  const handleAnswerClick = (answer: string) => {
+    if (isAnswering || selectedAnswer || !session) return;
     
     console.log('🎯 Resposta selecionada:', answer);
     
-    // Bloquear novos cliques e mostrar feedback imediatamente
+    // Bloquear novos cliques e mostrar feedback
     setIsAnswering(true);
     setSelectedAnswer(answer);
-    setShowFeedback(true);
+    setShowNextButton(true);
     
     // Submeter resposta e calcular resultado
     const result = submitAnswer(answer);
     
     console.log('📊 Resultado:', result);
+  };
+
+  const handleNextQuestion = async () => {
+    if (!session) return;
+
+    const isLastQuestion = session.currentQuestionIndex + 1 >= session.questions.length;
     
-    // Aguardar delay configurável antes de prosseguir
-    setTimeout(async () => {
-      if (result?.isComplete) {
-        // Quiz completo - ir para tela de resultados
-        console.log('🏁 Quiz completo, finalizando...');
-        setQuizState('loading');
-        const results = await finishQuiz();
-        if (results) {
-          setQuizResults(results);
-          setQuizState('results');
-        }
-      } else {
-        // Próxima pergunta - resetar estados
-        console.log('➡️ Próxima pergunta');
-        setShowFeedback(false);
-        setSelectedAnswer(null);
-        setIsAnswering(false);
+    if (isLastQuestion) {
+      // Quiz completo - ir para tela de resultados
+      console.log('🏁 Quiz completo, finalizando...');
+      setQuizState('loading');
+      const results = await finishQuiz();
+      if (results) {
+        setQuizResults(results);
+        setQuizState('results');
       }
-    }, FEEDBACK_DELAY);
+    } else {
+      // Próxima pergunta - resetar estados
+      console.log('➡️ Próxima pergunta');
+      setSelectedAnswer(null);
+      setIsAnswering(false);
+      setShowNextButton(false);
+    }
   };
 
   const handlePlayAgain = () => {
@@ -121,7 +124,7 @@ export function QuizPage() {
     setQuizResults(null);
     setSelectedAnswer(null);
     setIsAnswering(false);
-    setShowFeedback(false);
+    setShowNextButton(false);
   };
 
   const handleNextLevel = () => {
@@ -226,11 +229,12 @@ export function QuizPage() {
             >
               <QuizQuestion
                 question={currentQuestion}
-                onAnswer={handleAnswer}
+                onAnswerClick={handleAnswerClick}
                 isAnswered={isAnswering}
                 selectedAnswer={selectedAnswer}
                 correctAnswer={currentQuestion.resposta_correta}
-                showFeedback={showFeedback}
+                showNextButton={showNextButton}
+                onNextQuestion={handleNextQuestion}
               />
             </motion.div>
           </AnimatePresence>

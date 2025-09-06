@@ -6,20 +6,22 @@ import { Question } from '../../types/game';
 
 interface QuizQuestionProps {
   question: Question;
-  onAnswer: (answer: string) => void;
+  onAnswerClick: (answer: string) => void;
   isAnswered: boolean;
   selectedAnswer?: string | null;
   correctAnswer?: string;
-  showFeedback: boolean;
+  showNextButton: boolean;
+  onNextQuestion: () => void;
 }
 
 export function QuizQuestion({
   question,
-  onAnswer,
+  onAnswerClick,
   isAnswered,
   selectedAnswer,
   correctAnswer,
-  showFeedback
+  showNextButton,
+  onNextQuestion
 }: QuizQuestionProps) {
   const [hoveredOption, setHoveredOption] = useState<string | null>(null);
 
@@ -31,14 +33,14 @@ export function QuizQuestion({
   ];
 
   const getOptionStyle = (optionKey: string) => {
-    if (!showFeedback) {
+    if (!selectedAnswer) {
       if (hoveredOption === optionKey && !isAnswered) {
         return 'bg-slate-600 border-indigo-500 transform scale-105';
       }
       return 'bg-slate-700 hover:bg-slate-600 border-slate-600';
     }
 
-    // Show feedback
+    // Show feedback after selection
     if (optionKey === correctAnswer) {
       return 'bg-green-500/30 border-green-500 text-green-300 shadow-green-500/20 shadow-lg';
     }
@@ -49,7 +51,7 @@ export function QuizQuestion({
   };
 
   const getOptionIcon = (optionKey: string) => {
-    if (!showFeedback) return null;
+    if (!selectedAnswer) return null;
     
     if (optionKey === correctAnswer) {
       return (
@@ -118,7 +120,7 @@ export function QuizQuestion({
                 transition={{ delay: 0.3 + index * 0.1 }}
                 whileHover={!isAnswered ? { scale: 1.02 } : {}}
                 whileTap={!isAnswered ? { scale: 0.98 } : {}}
-                onClick={() => !isAnswered && onAnswer(option.key)}
+                onClick={() => !isAnswered && onAnswerClick(option.key)}
                 onMouseEnter={() => !isAnswered && setHoveredOption(option.key)}
                 onMouseLeave={() => setHoveredOption(null)}
                 disabled={isAnswered}
@@ -146,7 +148,7 @@ export function QuizQuestion({
 
         {/* Feedback Message */}
         <AnimatePresence>
-          {showFeedback && (
+          {selectedAnswer && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -166,6 +168,25 @@ export function QuizQuestion({
                   </p>
                 </div>
               )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Next Button */}
+        <AnimatePresence>
+          {showNextButton && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="mt-6 text-center"
+            >
+              <button
+                onClick={onNextQuestion}
+                className="w-full md:w-auto px-8 py-4 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+              >
+                Avançar para a próxima questão
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
