@@ -13,6 +13,9 @@ import { DifficultLevel } from '../types/game';
 
 type QuizState = 'intro' | 'playing' | 'results' | 'loading';
 
+// Configuração do delay para feedback visual
+const FEEDBACK_DELAY = 1200; // 1.2 segundos
+
 const LEVEL_ORDER: DifficultLevel[] = ['facil', 'medio', 'dificil', 'expert'];
 
 export function QuizPage() {
@@ -23,7 +26,8 @@ export function QuizPage() {
   const [quizState, setQuizState] = useState<QuizState>('intro');
   const [timeLeft, setTimeLeft] = useState(30);
   const [quizResults, setQuizResults] = useState(null);
-  const [selectedAnswer, setSelectedAnswer] = useState<string>('');
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+  const [isAnswering, setIsAnswering] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
 
   const currentLevel = (level as DifficultLevel) || 'facil';
@@ -36,13 +40,14 @@ export function QuizPage() {
     resetQuiz();
     setQuizState('intro');
     setQuizResults(null);
-    setSelectedAnswer('');
+    setSelectedAnswer(null);
+    setIsAnswering(false);
     setShowFeedback(false);
   }, [level, resetQuiz]);
 
   // Timer management
   useEffect(() => {
-    if (quizState !== 'playing' || !session || showFeedback) return;
+    if (quizState !== 'playing' || !session || isAnswering) return;
 
     setTimeLeft(30); // Reset timer for new question
 
@@ -57,7 +62,7 @@ export function QuizPage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [session?.currentQuestionIndex, quizState, showFeedback]);
+  }, [session?.currentQuestionIndex, quizState, isAnswering]);
 
   const handleStartQuiz = async () => {
     setQuizState('loading');
@@ -70,42 +75,52 @@ export function QuizPage() {
   };
 
   const handleTimeUp = () => {
-    if (showFeedback) return;
+    if (isAnswering) return;
     handleAnswer(''); // Empty answer for timeout
   };
 
-  const handleAnswer = async (answer: string) => {
-    if (showFeedback) return;
+  const handleAnswer = (answer: string) => {
+    if (isAnswering || !session) return;
     
+    console.log('🎯 Resposta selecionada:', answer);
+    
+    // Bloquear novos cliques e mostrar feedback imediatamente
+    setIsAnswering(true);
     setSelectedAnswer(answer);
     setShowFeedback(true);
     
+    // Submeter resposta e calcular resultado
     const result = submitAnswer(answer);
     
-    if (result?.isComplete) {
-      // Quiz completed - wait for feedback then show results
-      setTimeout(async () => {
+    console.log('📊 Resultado:', result);
+    
+    // Aguardar delay configurável antes de prosseguir
+    setTimeout(async () => {
+      if (result?.isComplete) {
+        // Quiz completo - ir para tela de resultados
+        console.log('🏁 Quiz completo, finalizando...');
         setQuizState('loading');
         const results = await finishQuiz();
         if (results) {
           setQuizResults(results);
           setQuizState('results');
         }
-      }, 2000);
-    } else {
-      // Next question - wait for feedback then continue
-      setTimeout(() => {
+      } else {
+        // Próxima pergunta - resetar estados
+        console.log('➡️ Próxima pergunta');
         setShowFeedback(false);
-        setSelectedAnswer('');
-      }, 2000);
-    }
+        setSelectedAnswer(null);
+        setIsAnswering(false);
+      }
+    }, FEEDBACK_DELAY);
   };
 
   const handlePlayAgain = () => {
     resetQuiz();
     setQuizState('intro');
     setQuizResults(null);
-    setSelectedAnswer('');
+    setSelectedAnswer(null);
+    setIsAnswering(false);
     setShowFeedback(false);
   };
 
@@ -176,6 +191,7 @@ export function QuizPage() {
               variant="ghost"
               onClick={handleBackToDashboard}
               className="flex items-center space-x-2"
+              disabled={isAnswering}
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Sair</span>
@@ -211,7 +227,7 @@ export function QuizPage() {
               <QuizQuestion
                 question={currentQuestion}
                 onAnswer={handleAnswer}
-                isAnswered={showFeedback}
+                isAnswered={isAnswering}
                 selectedAnswer={selectedAnswer}
                 correctAnswer={currentQuestion.resposta_correta}
                 showFeedback={showFeedback}

@@ -8,7 +8,7 @@ interface QuizQuestionProps {
   question: Question;
   onAnswer: (answer: string) => void;
   isAnswered: boolean;
-  selectedAnswer?: string;
+  selectedAnswer?: string | null;
   correctAnswer?: string;
   showFeedback: boolean;
 }
@@ -40,22 +40,38 @@ export function QuizQuestion({
 
     // Show feedback
     if (optionKey === correctAnswer) {
-      return 'bg-green-500/20 border-green-500 text-green-400';
+      return 'bg-green-500/30 border-green-500 text-green-300 shadow-green-500/20 shadow-lg';
     }
     if (optionKey === selectedAnswer && optionKey !== correctAnswer) {
-      return 'bg-red-500/20 border-red-500 text-red-400';
+      return 'bg-red-500/30 border-red-500 text-red-300 shadow-red-500/20 shadow-lg';
     }
-    return 'bg-slate-700/50 border-slate-600 opacity-60';
+    return 'bg-slate-700/30 border-slate-600/50 opacity-50';
   };
 
   const getOptionIcon = (optionKey: string) => {
     if (!showFeedback) return null;
     
     if (optionKey === correctAnswer) {
-      return <CheckCircle className="w-6 h-6 text-green-400" />;
+      return (
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
+          <CheckCircle className="w-6 h-6 text-green-400" />
+        </motion.div>
+      );
     }
     if (optionKey === selectedAnswer && optionKey !== correctAnswer) {
-      return <XCircle className="w-6 h-6 text-red-400" />;
+      return (
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
+          <XCircle className="w-6 h-6 text-red-400" />
+        </motion.div>
+      );
     }
     return null;
   };
