@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { QuizSession, Question, DifficultLevel } from '../types/game';
+import { QuizSession, DifficultLevel } from '../types/game';
 import { QuizService } from '../services/QuizService';
 import { useAuth } from './useAuth';
 
@@ -20,7 +20,7 @@ export function useQuiz() {
     if (!user) {
       setError('Usuário não autenticado');
       return null;
-    }
+    } 
     
     console.log('🎮 Iniciando quiz para nível:', nivel);
     setLoading(true);
@@ -79,8 +79,8 @@ export function useQuiz() {
     const updatedSession = {
       ...session,
       answers: [...session.answers, answer],
-      score: session.score + questionPoints,
-      currentQuestionIndex: session.currentQuestionIndex + 1
+      score: session.score + questionPoints
+      // NÃO incrementar currentQuestionIndex aqui - será feito depois do feedback
     };
 
     setSession(updatedSession);
@@ -91,6 +91,23 @@ export function useQuiz() {
       points: questionPoints,
       isComplete: updatedSession.answers.length === updatedSession.questions.length
     };
+  }, [session]);
+
+  const nextQuestion = useCallback(() => {
+    if (!session) {
+      console.warn('⚠️ Tentativa de avançar pergunta sem sessão ativa');
+      return null;
+    }
+
+    console.log('➡️ Avançando para próxima pergunta');
+    
+    const updatedSession = {
+      ...session,
+      currentQuestionIndex: session.currentQuestionIndex + 1
+    };
+
+    setSession(updatedSession);
+    return updatedSession;
   }, [session]);
 
   const finishQuiz = useCallback(async () => {
@@ -145,6 +162,7 @@ export function useQuiz() {
     error,
     startQuiz,
     submitAnswer,
+    nextQuestion,
     finishQuiz,
     resetQuiz
   };

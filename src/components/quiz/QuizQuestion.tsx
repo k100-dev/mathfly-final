@@ -176,17 +176,73 @@ export function QuizQuestion({
         <AnimatePresence>
           {showNextButton && (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="mt-6 text-center"
+              initial={{ opacity: 0, y: 20, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.9 }}
+              transition={{ 
+                type: "spring", 
+                stiffness: 300, 
+                damping: 20,
+                delay: 0.2 
+              }}
+              className="mt-8 text-center"
             >
-              <button
+              <motion.button
                 onClick={onNextQuestion}
-                className="w-full md:w-auto px-8 py-4 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                whileHover={{ 
+                  scale: 1.05,
+                  boxShadow: "0 20px 40px rgba(59, 130, 246, 0.3)"
+                }}
+                whileTap={{ scale: 0.95 }}
+                className="
+                  relative overflow-hidden
+                  w-full md:w-auto min-w-[280px]
+                  px-10 py-5
+                  bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600
+                  hover:from-blue-600 hover:via-indigo-600 hover:to-purple-700
+                  text-white font-bold text-lg
+                  rounded-2xl
+                  shadow-2xl hover:shadow-blue-500/25
+                  transition-all duration-300
+                  border border-white/20
+                  backdrop-blur-sm
+                "
               >
-                Avançar para a próxima questão
-              </button>
+                {/* Shimmer effect */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                  initial={{ x: "-100%" }}
+                  animate={{ x: "100%" }}
+                  transition={{ 
+                    duration: 2, 
+                    repeat: Infinity, 
+                    repeatDelay: 3,
+                    ease: "easeInOut"
+                  }}
+                />
+                
+                {/* Button content */}
+                <div className="relative flex items-center justify-center space-x-3">
+                  <motion.span
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="text-xl"
+                  >
+                    ➡️
+                  </motion.span>
+                  <motion.span
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                  >
+                    Avançar para a próxima questão
+                  </motion.span>
+                </div>
+                
+                {/* Glow effect */}
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-400/20 via-indigo-400/20 to-purple-400/20 opacity-0 hover:opacity-100 transition-opacity duration-300" />
+              </motion.button>
             </motion.div>
           )}
         </AnimatePresence>

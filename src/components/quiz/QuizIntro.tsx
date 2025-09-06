@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Play, Clock, Target, Trophy } from 'lucide-react';
+import { Play, Clock, Target, Trophy, ArrowLeft } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { DifficultLevel } from '../../types/game';
@@ -7,6 +7,7 @@ import { DifficultLevel } from '../../types/game';
 interface QuizIntroProps {
   level: DifficultLevel;
   onStart: () => void;
+  onBack?: () => void;
   totalQuestions: number;
   timePerQuestion?: number;
 }
@@ -42,7 +43,7 @@ const LEVEL_CONFIG = {
   }
 };
 
-export function QuizIntro({ level, onStart, totalQuestions, timePerQuestion = 30 }: QuizIntroProps) {
+export function QuizIntro({ level, onStart, onBack, totalQuestions, timePerQuestion = 30 }: QuizIntroProps) {
   const config = LEVEL_CONFIG[level];
 
   return (
@@ -53,7 +54,26 @@ export function QuizIntro({ level, onStart, totalQuestions, timePerQuestion = 30
         transition={{ duration: 0.5 }}
         className="w-full max-w-2xl"
       >
-        <Card className="p-8 text-center">
+        <Card className="p-8 text-center relative">
+          {/* Back Button */}
+          {onBack && (
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              className="absolute top-6 left-6"
+            >
+              <Button
+                variant="ghost"
+                onClick={onBack}
+                className="flex items-center space-x-2 text-slate-400 hover:text-white hover:bg-slate-700/50 transition-all duration-200"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Voltar</span>
+              </Button>
+            </motion.div>
+          )}
+
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}

@@ -13,19 +13,17 @@ import { DifficultLevel } from '../types/game';
 
 type QuizState = 'intro' | 'playing' | 'results' | 'loading';
 
-// Configuração do delay para feedback visual
-const FEEDBACK_DELAY = 1200; // 1.2 segundos
 
 const LEVEL_ORDER: DifficultLevel[] = ['facil', 'medio', 'dificil', 'expert'];
 
 export function QuizPage() {
   const navigate = useNavigate();
   const { level } = useParams<{ level: string }>();
-  const { session, loading, startQuiz, submitAnswer, finishQuiz, resetQuiz } = useQuiz();
+  const { session, loading, startQuiz, submitAnswer, nextQuestion, finishQuiz, resetQuiz } = useQuiz();
   
   const [quizState, setQuizState] = useState<QuizState>('intro');
   const [timeLeft, setTimeLeft] = useState(30);
-  const [quizResults, setQuizResults] = useState(null);
+  const [quizResults, setQuizResults] = useState<any>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [isAnswering, setIsAnswering] = useState(false);
   const [showNextButton, setShowNextButton] = useState(false);
@@ -110,8 +108,9 @@ export function QuizPage() {
         setQuizState('results');
       }
     } else {
-      // Próxima pergunta - resetar estados
+      // Próxima pergunta - usar nextQuestion do hook e resetar estados
       console.log('➡️ Próxima pergunta');
+      nextQuestion();
       setSelectedAnswer(null);
       setIsAnswering(false);
       setShowNextButton(false);
@@ -154,6 +153,7 @@ export function QuizPage() {
       <QuizIntro
         level={currentLevel}
         onStart={handleStartQuiz}
+        onBack={handleBackToDashboard}
         totalQuestions={5}
         timePerQuestion={30}
       />

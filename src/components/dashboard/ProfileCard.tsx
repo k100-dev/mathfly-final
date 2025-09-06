@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { User, LogOut, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { useAuth } from '../../hooks/useAuth';
@@ -11,9 +12,14 @@ interface ProfileCardProps {
 
 export function ProfileCard({ userStats }: ProfileCardProps) {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const handleSettingsClick = () => {
+    navigate('/settings');
   };
 
   // Show loading state while user data is being fetched
@@ -87,7 +93,7 @@ export function ProfileCard({ userStats }: ProfileCardProps) {
       )}
 
       <div className="space-y-2">
-        <Button variant="ghost" size="sm" className="w-full justify-start">
+        <Button variant="ghost" size="sm" className="w-full justify-start" onClick={handleSettingsClick}>
           <Settings className="w-4 h-4" />
           Configurações
         </Button>

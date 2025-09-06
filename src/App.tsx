@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './hooks/useAuth.tsx';
 import { AuthPage } from './pages/AuthPage';
 import { Dashboard } from './pages/Dashboard';
 import { QuizPage } from './pages/QuizPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import { DifficultLevel } from './types/game';
 
@@ -29,6 +30,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/quiz/:level" element={<QuizPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
