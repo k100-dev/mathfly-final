@@ -132,8 +132,8 @@ export function QuizQuestion({
                 `}
               >
                 <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center font-bold text-lg
-                  ${showFeedback && option.key === correctAnswer ? 'border-green-400' :
-                    showFeedback && option.key === selectedAnswer && option.key !== correctAnswer ? 'border-red-400' :
+                  ${isAnswered && option.key === correctAnswer ? 'border-green-400' :
+                    isAnswered && option.key === selectedAnswer && option.key !== correctAnswer ? 'border-red-400' :
                     'border-current'
                   }
                 `}>
