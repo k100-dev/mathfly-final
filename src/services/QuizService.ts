@@ -1732,7 +1732,11 @@ export class QuizService {
       },
       {
         "id_pergunta": "m73",
-        "enunciado": "Se a área de um quadrado é 100 cm², qual é o seu perímetro?",
+        "enunciado": "Se a
+      }
+    ]
+  }
+} área de um quadrado é 100 cm², qual é o seu perímetro?",
         "alternativa_a": "20 cm",
         "alternativa_b": "40 cm",
         "alternativa_c": "10 cm",
