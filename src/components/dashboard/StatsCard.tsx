@@ -37,7 +37,7 @@ export function StatsCard({ title, value, subtitle, icon: Icon, color, trend }: 
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2 }}
         >
-          {typeof value === 'number' && value % 1 !== 0 ? value.toFixed(1) : value}
+          {typeof value === 'number' ? value.toLocaleString() : value}
         </motion.h3>
         <p className="text-slate-400 text-sm mb-1">{title}</p>
         {subtitle && (

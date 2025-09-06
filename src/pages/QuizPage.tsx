@@ -62,17 +62,18 @@ export function QuizPage() {
           setQuizResults(results);
           setShowResults(true);
         }
-      }, 2000);
+      }, 1500); // Reduzir delay para melhor UX
     } else {
       // Next question
       setTimeout(() => {
         setIsAnswered(false);
-        setTimeLeft(45); // Reset timer for next question
-      }, 2000);
+      }, 1500); // Reduzir delay entre perguntas
     }
   };
 
   const handleBackToDashboard = () => {
+    setShowResults(false);
+    setQuizResults(null);
     navigate('/');
   };
 
@@ -80,7 +81,6 @@ export function QuizPage() {
     setShowResults(false);
     setQuizResults(null);
     setIsAnswered(false);
-    setTimeLeft(45);
     startQuiz(currentLevel);
   };
 

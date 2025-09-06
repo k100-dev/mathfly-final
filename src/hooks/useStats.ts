@@ -91,21 +91,22 @@ export function useStats() {
     try {
       console.log('🏆 Carregando ranking global...');
       
+      // CORRIGIDO: Buscar ranking baseado no total de pontos acumulados
       const { data } = await supabase
-        .from('phase_results')
+        .from('user_progress')
         .select(`
-          points_earned,
-          completed_at,
+          total_points,
+          updated_at,
           users!inner(name)
         `)
-        .order('points_earned', { ascending: false })
+        .order('total_points', { ascending: false })
         .limit(20);
 
       if (data) {
         const rankings: RankingEntry[] = data.map((entry: any) => ({
           nome: entry.users?.name || 'Usuário Anônimo',
-          pontuacao: entry.points_earned,
-          data_partida: entry.completed_at
+          pontuacao: entry.total_points,
+          data_partida: entry.updated_at
         }));
         console.log('✅ Ranking carregado:', rankings.length, 'entradas');
         setGlobalRanking(rankings);
@@ -184,9 +185,9 @@ export function useStats() {
     const subscription = supabase
       .channel('ranking_updates')
       .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'phase_results' },
+        { event: '*', schema: 'public', table: 'user_progress' }, // Escutar todas as mudanças
         (payload) => {
-          console.log('🔄 Novo resultado detectado, atualizando ranking...', payload);
+          console.log('🔄 Progresso atualizado, atualizando ranking...', payload);
           loadGlobalRanking();
         }
       )

@@ -131,20 +131,20 @@ export function ResultsModal({
         </div>
 
         {/* Ações */}
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-4 pt-4">
           <Button 
             variant="primary" 
             onClick={onPlayAgain}
-            className="flex-1"
+            className="flex-1 text-lg py-4"
           >
-            Jogar Novamente
+            🎮 Jogar Novamente
           </Button>
           <Button 
             variant="secondary" 
             onClick={onBackToDashboard}
-            className="flex-1"
+            className="flex-1 text-lg py-4"
           >
-            Voltar ao Dashboard
+            🏠 Voltar ao Menu
           </Button>
         </div>
       </div>

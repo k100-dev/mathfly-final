@@ -93,12 +93,18 @@ export function QuestionCard({
               onClick={() => !isAnswered && onAnswer(option.key)}
               disabled={isAnswered}
               className={`
-                p-4 rounded-xl border-2 text-left transition-all duration-200 bg-slate-700 hover:bg-slate-600 border-slate-600
+                p-4 rounded-xl border-2 text-left transition-all duration-200 
+                ${!isAnswered 
+                  ? 'bg-slate-700 hover:bg-slate-600 border-slate-600 hover:border-indigo-500' 
+                  : 'bg-slate-800 border-slate-700'
+                }
                 ${isAnswered ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
                 flex items-center space-x-4
               `}
             >
-              <div className="w-8 h-8 rounded-full border-2 border-current flex items-center justify-center font-bold">
+              <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-bold
+                ${!isAnswered ? 'border-current' : 'border-slate-600'}
+              `}>
                 {String.fromCharCode(65 + index)}
               </div>
               <span className="flex-1 text-lg">{option.text}</span>

@@ -64,7 +64,7 @@ export function RankingTable({ rankings, userRank, loading }: RankingTableProps)
         )}
       </div>
       
-      <div className="space-y-2 max-h-96 overflow-y-auto">
+      <div className="space-y-2 max-h-80 overflow-y-auto custom-scrollbar">
         {rankings.map((entry, index) => {
           const position = index + 1;
           const isTopThree = position <= 3;
@@ -92,7 +92,7 @@ export function RankingTable({ rankings, userRank, loading }: RankingTableProps)
                   {entry.nome}
                 </p>
                 <p className="text-xs text-slate-500">
-                  {formatDate(entry.data_partida)}
+                  Última atualização: {formatDate(entry.data_partida)}
                 </p>
               </div>
               

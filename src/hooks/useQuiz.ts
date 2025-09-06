@@ -359,7 +359,7 @@ export function useQuiz() {
         console.log('✅ Resultado da fase salvo com sucesso');
       }
 
-      // Update user progress
+      // Update user progress - CORRIGIDO: Agora soma os pontos ao invés de substituir
       const { data: currentProgress } = await supabase
         .from('user_progress')
         .select('*')
@@ -372,7 +372,7 @@ export function useQuiz() {
           .from('user_progress')
           .update({
             total_correct: progressData.total_correct + correctAnswers,
-            total_points: progressData.total_points + session.score,
+            total_points: progressData.total_points + session.score, // SOMA os pontos
             max_phase: Math.max(progressData.max_phase, phaseNumber)
           })
           .eq('user_id', user.id);
@@ -404,7 +404,7 @@ export function useQuiz() {
       };
 
       console.log('🎉 Quiz finalizado com sucesso:', results);
-      setSession(null);
+      // NÃO limpar a sessão aqui - deixar para o componente gerenciar
       return results;
     } catch (error) {
       console.error('❌ Erro ao finalizar quiz:', error);
