@@ -4052,7 +4052,7 @@ export class QuizService {
     } catch (error) {
       console.error('❌ Erro ao buscar questões:', error);
       throw error;
-  }
+  },
 
   static async saveQuizResult(userId: string, result: {
     nivel: DifficultLevel;
