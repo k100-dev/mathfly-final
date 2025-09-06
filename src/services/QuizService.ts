@@ -4052,7 +4052,6 @@ export class QuizService {
     } catch (error) {
       console.error('❌ Erro ao buscar questões:', error);
       throw error;
-    }
   }
 
   static async saveQuizResult(userId: string, result: {
@@ -4070,7 +4069,6 @@ export class QuizService {
       // Salvar resultado da fase
       const { error: phaseError } = await supabase.from('phase_results').insert({
         user_id: userId,
-        phase: phaseNumber,
         correct_answers: result.correctAnswers,
         points_earned: result.score
       });
